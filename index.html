@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shahid Baba & Shahid Shah | Max Storage V8.0</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        :root { --primary-dark: #050505; --accent-gold: #ffc300; --royal-blue: #0066cc; --card-bg: #ffffff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Poppins', sans-serif; background: var(--primary-dark); color: #fff; }
+        #particles-js { position: fixed; width: 100%; height: 100%; z-index: 1; opacity: 0.2; }
+
+        header { 
+            background: #000; padding: 15px 5%; display: flex; justify-content: space-between; 
+            align-items: center; border-bottom: 2px solid var(--accent-gold); 
+            position: sticky; top: 0; z-index: 1000;
+        }
+        .logo-text { font-family: 'Oswald', sans-serif; font-size: 1.5rem; color: var(--accent-gold); text-transform: uppercase; }
+
+        .container { display: grid; grid-template-columns: 1fr 300px; gap: 20px; padding: 20px 5%; position: relative; z-index: 10; }
+        .feed { display: flex; flex-direction: column; gap: 25px; }
+
+        .post { background: var(--card-bg); color: #222; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .media-box img, .media-box video { width: 100%; height: auto; max-height: 600px; display: block; background: #000; }
+
+        .post-body { padding: 18px; }
+        .user-info { font-weight: 700; color: var(--royal-blue); margin-bottom: 5px; }
+        .post-title { font-family: 'Oswald', sans-serif; font-size: 1.4rem; margin-bottom: 10px; color: #000; }
+
+        .actions { display: flex; gap: 20px; border-top: 1px solid #eee; padding-top: 15px; margin-top: 10px; font-size: 1.3rem; color: #888; }
+        .act-btn { cursor: pointer; transition: 0.2s; }
+        .act-btn:hover { color: var(--royal-blue); }
+        .liked { color: #ff4d6d !important; }
+
+        .fab { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: var(--accent-gold); color: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; cursor: pointer; z-index: 2000; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+
+        #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 5000; padding: 20px; overflow-y: auto; }
+        .modal-content { max-width: 450px; margin: auto; background: #fff; color: #000; padding: 25px; border-radius: 15px; }
+        input, textarea { width: 100%; padding: 10px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 8px; }
+        
+        .upload-label { display: block; border: 2px dashed var(--royal-blue); padding: 20px; text-align: center; cursor: pointer; border-radius: 8px; background: #f9f9f9; }
+
+        @media (max-width: 850px) { .container { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+<div id="particles-js"></div>
+
+<header>
+    <div class="logo-text">Shahid Baba & Shahid Shah</div>
+    <div id="clock" style="color: var(--accent-gold); font-weight: bold;">00:00:00</div>
+</header>
+
+<div class="container">
+    <main class="feed" id="mainFeed"></main>
+    <aside style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; height: fit-content;">
+        <h3 style="color:var(--accent-gold); font-family:'Oswald';">2GB STORAGE ACTIVE</h3>
+        <p style="font-size:0.8rem; margin-top:10px;">Haji Bagh Friend Baba & Shahid Shah Portal</p>
+        <button onclick="exportData()" style="width:100%; margin-top:15px; padding:8px; background:var(--royal-blue); color:#fff; border:none; cursor:pointer; font-weight:bold;">PDF Archive</button>
+    </aside>
+</div>
+
+<div class="fab" onclick="toggleModal()"><i class="fas fa-plus"></i></div>
+
+<div id="modal">
+    <div class="modal-content">
+        <h2 style="text-align:center; color:var(--royal-blue); margin-bottom:15px;">New Broadcast</h2>
+        <input type="text" id="pUser" placeholder="Your Name">
+        <input type="text" id="pTitle" placeholder="Headline">
+        <label class="upload-label">
+            <i class="fas fa-file-upload"></i> Pick from Gallery (Max 2GB)<br>
+            <input type="file" id="pMedia" accept="image/*,video/*" style="display:none;" onchange="preview()">
+        </label>
+        <div id="pWait" style="display:none; text-align:center; font-size:0.8rem; color:blue;">Processing File...</div>
+        <textarea id="pDesc" rows="3" placeholder="Description"></textarea>
+        <input type="password" id="pKey" placeholder="Admin Key">
+        <button onclick="saveToDB()" style="width:100%; padding:12px; background:var(--royal-blue); color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Publish Now</button>
+        <p onclick="toggleModal()" style="text-align:center; margin-top:10px; cursor:pointer; color:#777;">Cancel</p>
+    </div>
+</div>
+
+<script>
+    const MASTER_KEY = "shahid786";
+    let db;
+    let tempMedia = null;
+    let tempType = "";
+
+    // 1. Initialize IndexedDB (2GB Capable)
+    const request = indexedDB.open("ShahidBabaDB", 1);
+    request.onupgradeneeded = (e) => {
+        db = e.target.result;
+        db.createObjectStore("posts", { keyPath: "id" });
+    };
+    request.onsuccess = (e) => { db = e.target.result; renderFeed(); };
+
+    function preview() {
+        const file = document.getElementById('pMedia').files[0];
+        if(!file) return;
+        document.getElementById('pWait').style.display = 'block';
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            tempMedia = e.target.result;
+            tempType = file.type.startsWith('video') ? 'video' : 'image';
+            document.getElementById('pWait').innerText = "File Ready ✓";
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function saveToDB() {
+        const title = document.getElementById('pTitle').value;
+        if(!title || !tempMedia) return alert("Add title and media!");
+
+        const newPost = {
+            id: Date.now(),
+            user: document.getElementById('pUser').value || "Shahid Friend",
+            title: title, desc: document.getElementById('pDesc').value,
+            media: tempMedia, type: tempType,
+            isAdmin: document.getElementById('pKey').value === MASTER_KEY,
+            comments: []
+        };
+
+        const tx = db.transaction("posts", "readwrite");
+        tx.objectStore("posts").add(newPost);
+        tx.oncomplete = () => {
+            tempMedia = null;
+            document.getElementById('pWait').style.display = 'none';
+            toggleModal(); renderFeed();
+        };
+    }
+
+    function renderFeed() {
+        const feed = document.getElementById('mainFeed');
+        const tx = db.transaction("posts", "readonly");
+        const store = tx.objectStore("posts");
+        const request = store.getAll();
+
+        request.onsuccess = () => {
+            const posts = request.result.reverse();
+            feed.innerHTML = posts.map(p => `
+                <div class="post">
+                    <div class="media-box">${p.type==='video' ? `<video controls src="${p.media}"></video>` : `<img src="${p.media}">`}</div>
+                    <div class="post-body">
+                        <div class="user-info">${p.user} ${p.isAdmin?'✔':''}</div>
+                        <h2 class="post-title">${p.title}</h2>
+                        <p style="color:#555;">${p.desc}</p>
+                        <div class="actions">
+                            <i class="far fa-heart act-btn" onclick="this.classList.toggle('fas'); this.classList.toggle('liked')"></i>
+                            <i class="far fa-comment act-btn" onclick="toggleC(${p.id})"></i>
+                            <i class="far fa-paper-plane act-btn" onclick="copyL('${p.title}')"></i>
+                            <i class="fas fa-trash" style="margin-left:auto; font-size:0.8rem; color:#eee; cursor:pointer;" onclick="delPost(${p.id})"></i>
+                        </div>
+                        <div id="c-${p.id}" style="display:none; margin-top:10px; border-top:1px solid #eee; padding-top:10px;">
+                            <div style="font-size:0.8rem;">${p.comments.map(c=>`<div>• ${c}</div>`).join('')}</div>
+                            <div style="display:flex; margin-top:5px; gap:5px;">
+                                <input type="text" id="ci-${p.id}" placeholder="Comment..." style="margin:0; padding:5px;">
+                                <button onclick="addC(${p.id})" style="background:var(--royal-blue); color:#fff; border:none; padding:0 10px; border-radius:4px;">></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        };
+    }
+
+    function toggleC(id) {
+        const el = document.getElementById(`c-${id}`);
+        el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function addC(id) {
+        const inp = document.getElementById(`ci-${id}`);
+        const tx = db.transaction("posts", "readwrite");
+        const store = tx.objectStore("posts");
+        store.get(id).onsuccess = (e) => {
+            const data = e.target.result;
+            data.comments.push(inp.value);
+            store.put(data);
+            tx.oncomplete = () => { inp.value=""; renderFeed(); };
+        };
+    }
+
+    function delPost(id) {
+        if(prompt("Admin Key:") === MASTER_KEY) {
+            const tx = db.transaction("posts", "readwrite");
+            tx.objectStore("posts").delete(id);
+            tx.oncomplete = () => renderFeed();
+        }
+    }
+
+    function copyL(t) { navigator.clipboard.writeText("Shahid Baba Website: " + t); alert("Copied!"); }
+
+    function exportData() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.text("SHAHID BABA & SHAHID SHAH - HISTORY", 10, 10);
+        doc.save("History.pdf");
+    }
+
+    function toggleModal() {
+        const m = document.getElementById('modal');
+        m.style.display = m.style.display === 'block' ? 'none' : 'block';
+    }
+
+    setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString(); }, 1000);
+    window.onload = () => { particlesJS("particles-js", { "particles": { "number": { "value": 30 }, "color": { "value": "#ffffff" }, "line_linked": { "opacity": 0.1 }, "move": { "speed": 1 } } }); };
+</script>
+</body>
+</html>
